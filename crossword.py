@@ -126,7 +126,6 @@ class Crossword():
                     )
 
     def neighbors(self, var):
-        """Given a variable, return set of overlapping variables."""
         return set(
             v for v in self.variables
             if v != var and self.overlaps[v, var]
