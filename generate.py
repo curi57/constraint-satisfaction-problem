@@ -88,6 +88,7 @@ class CrosswordCreator():
         self.ac3()
         return self.backtrack(dict())
 
+    # Build the domain values in a node consistent way at the start instead of doing it in this function
     def enforce_node_consistency(self):
         for var in self.crossword.variables:
             fits_var = lambda word: len(word) == var.length
