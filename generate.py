@@ -5,10 +5,7 @@ from crossword import *
 
 class CrosswordCreator():
 
-    def __init__(self, crossword):
-        """
-        Create new CSP crossword generate.
-        """
+    def __init__(self, crossword : Crossword):
         self.crossword = crossword
         self.domains = {
             var: self.crossword.words.copy()
@@ -86,20 +83,15 @@ class CrosswordCreator():
         img.save(filename)
 
     def solve(self):
-        """
-        Enforce node and arc consistency, and then solve the CSP.
-        """
+         
         self.enforce_node_consistency()
         self.ac3()
         return self.backtrack(dict())
 
     def enforce_node_consistency(self):
-        """
-        Update `self.domains` such that each variable is node-consistent.
-        (Remove any values that are inconsistent with a variable's unary
-         constraints; in this case, the length of the word.)
-        """
-        raise NotImplementedError
+        for var in self.crossword.variables:
+            fits_var = lambda word: len(word) == var.length
+            self.domains[var] = list(filter(fits_var, self.domains[var]))
 
     def revise(self, x, y):
         """
