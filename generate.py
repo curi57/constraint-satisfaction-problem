@@ -131,10 +131,23 @@ class CrosswordCreator():
         """
         if arcs is None:
             arcs = set()
-            for variable in self.crossword.variables:
-                arcs = arcs | self.crossword.neighbors(variable)
+            for x in self.crossword.variables:
+                for y in self.crossword.variables:
+                    if self.crossword.overlaps[x, y]:
+                        arcs.add((x, y))
             
             arcs = list(arcs)
+        
+        for arc in arcs:
+            if self.revise(arc[0], arc[1]):
+                arcs.remove(arc)
+
+                # Add all the modified variable relations back to the arcs structure
+                # Verify if domain still has values 
+            
+
+        
+        
     
 
         return True
