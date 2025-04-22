@@ -94,17 +94,32 @@ class CrosswordCreator():
             fits_var = lambda word: len(word) == var.length
             self.domains[var] = list(filter(fits_var, self.domains[var]))
 
-    def revise(self, x, y):
-        """
-        Make variable `x` arc consistent with variable `y`.
-        To do so, remove values from `self.domains[x]` for which there is no
-        possible corresponding value for `y` in `self.domains[y]`.
+    def revise(self, x : Variable, y : Variable):
+        
+        print(f"Domains: {self.domains}")
 
-        Return True if a revision was made to the domain of `x`; return
-        False if no revision was made.
-        """
-        raise NotImplementedError
+        # What happens when i use a Variable as a key? Do they use the __str__ or __repr__ method to understand it as a key string?
+        revised = False
 
+        # x & y represents a Variable (a sequence of empty spots for letters)
+        for word_x in self.domains[x]:
+            for word_y in self.domains[y]:
+                if word_x == word_y:
+                    self.domains[x].remove(word_x)
+                    revised = True
+                
+                # index_overlap is a tuple wich represents the indexes of the intersection coordinate point in the x and y variables (wich may differ from each other)
+                # These indexes also points to the letter in either candidate words.
+                intersection_indexes = self.crossword.overlaps[x, y]
+
+                # here i need to verify if the letters from corresponding variables indices are equal to each other
+                if word_x[intersection_indexes[0]] != word_y[intersection_indexes[1]]:
+                    self.domains[x].remove(word_x)
+                    revised = True 
+        
+        return revised
+ 
+                
     def ac3(self, arcs=None):
         """
         Update `self.domains` such that each variable is arc consistent.
@@ -114,7 +129,13 @@ class CrosswordCreator():
         Return True if arc consistency is enforced and no domains are empty;
         return False if one or more domains end up empty.
         """
-        arcs = arcs 
+        if arcs is None:
+            arcs = set()
+            for variable in self.crossword.variables:
+                arcs = arcs | self.crossword.neighbors(variable)
+            
+            arcs = list(arcs)
+    
 
         return True
 
@@ -151,7 +172,7 @@ class CrosswordCreator():
         """
         raise NotImplementedError
 
-    def backtrack(self, assignment):
+    def backtrack(self, assignment : dict):
         """
         Using Backtracking Search, take as input a partial assignment for the
         crossword and return a complete assignment if possible to do so.
@@ -160,7 +181,24 @@ class CrosswordCreator():
 
         If no assignment is possible, return None.
         """
-        raise NotImplementedError
+        
+        variable = self.select_unassigned_variable(assignment)
+        assignment_cp = assignment.copy()
+
+        first_value = next(iter(self.domains[variable]))        
+        assignment_cp[variable] = first_value
+
+        
+        arcs = set()
+        for variable in self.crossword.variables:
+            arcs = arcs | self.crossword.neighbors(variable)
+            
+        arcs = list(arcs)
+        
+        for i in self.crossword.variables:
+            for j in self.crossword.variables:
+                print(i, j)
+
 
 
 def main():
