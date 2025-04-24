@@ -121,37 +121,35 @@ class CrosswordCreator():
  
                 
     def ac3(self, arcs=None):
-        """
-        Update `self.domains` such that each variable is arc consistent.
-        If `arcs` is None, begin with initial list of all arcs in the problem.
-        Otherwise, use `arcs` as the initial list of arcs to make consistent.
-
-        Return True if arc consistency is enforced and no domains are empty;
-        return False if one or more domains end up empty.
-        """
+        
+        # Transform variable `arcs` into a class property to avoid buildind the same structure every function call
+        # Do not insert duplicate arcs (order does not matter)
         if arcs is None:
             arcs = set()
             for x in self.crossword.variables:
                 for y in self.crossword.variables:
-                    if self.crossword.overlaps[x, y]:
+                    if self.crossword.overlaps[x, y] and not arcs.__contains__((y, x)):
                         arcs.add((x, y))
             
             arcs = list(arcs)
+
+        print(f"Arcs: {arcs}")
         
         for arc in arcs:
+
+            # The code always remove from the arc[0] in case of enforcing arc consistency
             if self.revise(arc[0], arc[1]):
-                arcs.remove(arc)
-
-                # Add all the modified variable relations back to the arcs structure
-                # Verify if domain still has values 
+                
+                # Move it to Backtrack Function
+                if not len(self.domains[arc[0]]):
+                    return False
+                
+                neighboors = self.crossword.neighbors(arc[0])
+                arcs.extend(list(neighboors))
             
+        return True    
 
-        
-        
-    
-
-        return True
-
+                
     def assignment_complete(self, assignment):
         """
         Return True if `assignment` is complete (i.e., assigns a value to each
@@ -241,3 +239,14 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+
+"""
+        Update `self.domains` such that each variable is arc consistent.
+        If `arcs` is None, begin with initial list of all arcs in the problem.
+        Otherwise, use `arcs` as the initial list of arcs to make consistent.
+
+        Return True if arc consistency is enforced and no domains are empty;
+        return False if one or more domains end up empty.
+        """
