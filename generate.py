@@ -140,7 +140,7 @@ class CrosswordCreator():
             # The code always remove from the arc[0] in case of enforcing arc consistency
             if self.revise(arc[0], arc[1]):
                 
-                # Move it to Backtrack Function
+                # Move it to Backtrack Function (?)
                 if not len(self.domains[arc[0]]):
                     return False
                 
@@ -169,15 +169,48 @@ class CrosswordCreator():
         """
         raise NotImplementedError
 
-    def select_unassigned_variable(self, assignment):
-        """
-        Return an unassigned variable not already part of `assignment`.
-        Choose the variable with the minimum number of remaining values
-        in its domain. If there is a tie, choose the variable with the highest
-        degree. If there is a tie, any of the tied variables are acceptable
-        return values.
-        """
-        raise NotImplementedError
+    def select_unassigned_variable(self, assignment : dict):
+        
+        unassigned_vars = list()
+        assignment_keys = assignment.keys()
+        for var in self.crossword.variables:
+            if not assignment_keys.__contains__(var):
+                unassigned_vars.append(var)
+        
+        less_remaining = len(self.crossword.words)
+        selected_vars = []
+        for var in unassigned_vars:
+            if len(self.domains[var] <= less_remaining):
+                less_remaining = len(self.domains[var])
+                selected_vars.append(var)
+                
+                print(f"less remaining var: {selected_vars}")
+        
+        if len(selected_vars) > 1:
+            print("Tie!")
+            neighboors_qt = 0
+            selected_var = None 
+            for var in selected_vars:
+
+                # Do What kind of structure is that?
+                neighboors = self.crossword.neighbors(var)
+                if len(neighboors) >= neighboors:
+                    neighboors_qt = len(neighboors)
+                    selected_var = var 
+
+                    print(f"selected var: {selected_var}")
+
+            return selected_var
+        
+        elif len(selected_var):
+            return selected_var[0]
+        
+        else:
+
+            # Do what kind of error can be raised here?
+            raise Exception()
+
+
 
     def backtrack(self, assignment : dict):
         """
@@ -245,4 +278,12 @@ if __name__ == "__main__":
 
         Return True if arc consistency is enforced and no domains are empty;
         return False if one or more domains end up empty.
-        """
+"""
+
+"""
+        Return an unassigned variable not already part of `assignment`.
+        Choose the variable with the minimum number of remaining values
+        in its domain. If there is a tie, choose the variable with the highest
+        degree. If there is a tie, any of the tied variables are acceptable
+        return values.
+"""
