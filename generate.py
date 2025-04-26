@@ -153,12 +153,22 @@ class CrosswordCreator():
     def assignment_complete(self, assignment):
         return len(assignment) == len(self.crossword.variables)
 
-    def consistent(self, assignment):
-        """
-        Return True if `assignment` is consistent (i.e., words fit in crossword
-        puzzle without conflicting characters); return False otherwise.
-        """
-        raise NotImplementedError
+    # Review
+    def consistent(self, assignment : dict):
+        
+        items = assignment.items()
+
+        for variable_i, word_i in items:
+            for variable_j, word_j in items:
+                if variable_i != variable_j:
+                    overlap_indexes = self.crossword.overlaps[variable_i, variable_j]
+                    if overlap_indexes:
+                        if word_i[overlap_indexes[0]] != word_j[overlap_indexes[1]]:
+                            return False
+
+        return True
+
+
 
     def order_domain_values(self, var, assignment):
         """
@@ -167,7 +177,8 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        raise NotImplementedError
+        return list()
+
 
     def select_unassigned_variable(self, assignment : dict):
         
@@ -187,15 +198,15 @@ class CrosswordCreator():
                 print(f"less remaining var: {selected_vars}")
         
         if len(selected_vars) > 1:
+            
             print("Tie!")
-            neighboors_qt = 0
+            
             selected_var = None 
             for var in selected_vars:
 
                 # Do What kind of structure is that?
                 neighboors = self.crossword.neighbors(var)
                 if len(neighboors) >= neighboors:
-                    neighboors_qt = len(neighboors)
                     selected_var = var 
 
                     print(f"selected var: {selected_var}")
@@ -211,33 +222,32 @@ class CrosswordCreator():
             raise Exception()
 
 
-
     def backtrack(self, assignment : dict):
-        """
-        Using Backtracking Search, take as input a partial assignment for the
-        crossword and return a complete assignment if possible to do so.
-
-        `assignment` is a mapping from variables (keys) to words (values).
-
-        If no assignment is possible, return None.
-        """
         
         variable = self.select_unassigned_variable(assignment)
+        order_domain_values = self.order_domain_values(variable, assignment)
+
+        if not len(order_domain_values):
+            return None 
+        
+        word = order_domain_values[0]
+        # Every time a new variable is assigned a new consistent verification has to be made 
+        # The system is capable of making inferences while making verification
         assignment_cp = assignment.copy()
+        assignment_cp[variable] = word
+        self.domains[variable].remove(word)
 
-        first_value = next(iter(self.domains[variable]))        
-        assignment_cp[variable] = first_value
+        # After setting the a value in the assignment verification is mandatory
+        if self.consistent(assignment): # this function probably calls the AC3 function (?)
+            return self.backtrack(assignment)
+        else:
+            # undo assignments?
+            print("undo assignments")
+            assignment.pop() # it removes the last inserted element?
 
         
-        arcs = set()
-        for variable in self.crossword.variables:
-            arcs = arcs | self.crossword.neighbors(variable)
-            
-        arcs = list(arcs)
+        return None 
         
-        for i in self.crossword.variables:
-            for j in self.crossword.variables:
-                print(i, j)
 
 
 
@@ -270,3 +280,14 @@ if __name__ == "__main__":
     main()
 
 
+
+
+
+"""
+        Using Backtracking Search, take as input a partial assignment for the
+        crossword and return a complete assignment if possible to do so.
+
+        `assignment` is a mapping from variables (keys) to words (values).
+
+        If no assignment is possible, return None.
+        """
