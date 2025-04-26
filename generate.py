@@ -158,12 +158,13 @@ class CrosswordCreator():
         
         items = assignment.items()
 
+        # The assignment Keys are the name of the Variables (?)
         for variable_i, word_i in items:
             for variable_j, word_j in items:
                 if variable_i != variable_j:
                     overlap_indexes = self.crossword.overlaps[variable_i, variable_j]
                     if overlap_indexes:
-                        if word_i[overlap_indexes[0]] != word_j[overlap_indexes[1]]:
+                        if (word_i[overlap_indexes[0]] != word_j[overlap_indexes[1]]) or word_i == word_j:
                             return False
 
         return True
