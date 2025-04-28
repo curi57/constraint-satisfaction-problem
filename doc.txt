@@ -1,0 +1,26 @@
+
+Lambda Functions
+Lambda functions in Python are small, anonymous functions defined using the lambda keyword. 
+They are useful for creating short, one-line functions that can be used inline within other expressions.
+
+add = lambda x, y: x + y
+print(add(5, 3))
+# Output: 8
+
+square = lambda x: x**2
+print(square(4))
+# Output: 16
+
+greet = lambda name: f"Hello, {name}!"
+print(greet("World"))
+# Output: Hello, World!
+
+
+numbers = [1, 2, 3, 4, 5]
+squared_numbers = list(map(lambda x: x**2, numbers))
+print(squared_numbers)
+# Output: [1, 4, 9, 16, 25]
+
+even_numbers = list(filter(lambda x: x % 2 == 0, numbers))
+print(even_numbers)
+# Output: [2, 4]

@@ -94,6 +94,7 @@ class CrosswordCreator():
             fits_var = lambda word: len(word) == var.length
             self.domains[var] = list(filter(fits_var, self.domains[var]))
 
+
     def revise(self, x : Variable, y : Variable):
         
         print(f"Domains: {self.domains}")
@@ -102,11 +103,9 @@ class CrosswordCreator():
         revised = False
 
         # x & y represents a Variable (a sequence of empty spots for letters)
-        for word_x in self.domains[x]:
+        for word_x in self.domains[x].copy(): # I have to create a copy because i will maybe change the original structure 
+            # while iterating it
             for word_y in self.domains[y]:
-                if word_x == word_y:
-                    self.domains[x].remove(word_x)
-                    revised = True
                 
                 # index_overlap is a tuple wich represents the indexes of the intersection coordinate point in the x and y variables (wich may differ from each other)
                 # These indexes also points to the letter in either candidate words.
@@ -134,6 +133,8 @@ class CrosswordCreator():
             arcs = list(arcs)
 
         print(f"Arcs: {arcs}")
+
+        # --------------------------------------------------------------------------------------------------------
         
         for arc in arcs:
 
@@ -228,28 +229,29 @@ class CrosswordCreator():
         variable = self.select_unassigned_variable(assignment)
         order_domain_values = self.order_domain_values(variable, assignment)
 
-        if not len(order_domain_values):
-            return None 
+        #if not len(order_domain_values):
+        #    return None 
         
         word = order_domain_values[0]
         # Every time a new variable is assigned a new consistent verification has to be made 
         # The system is capable of making inferences while making verification
         assignment_cp = assignment.copy()
         assignment_cp[variable] = word
-        self.domains[variable].remove(word)
 
-        # After setting the a value in the assignment verification is mandatory
-        if self.consistent(assignment): # this function probably calls the AC3 function (?)
-            return self.backtrack(assignment)
-        else:
-            # undo assignments?
-            print("undo assignments")
-            assignment.pop() # it removes the last inserted element?
+        # It is necessary to reflect the value domain choice in the self.domains values for this selected variable
+        self.domains[variable] = filter(lambda w : w == word, self.domains[variable]) 
 
-        
+        # The AC3 arc-consistency verification is mandatory after set assignment value  
+        consistent = self.ac3() # Send Arcs
+    
         return None 
         
-
+#if self.consistent(assignment): # this function probably calls the AC3 function (?)
+#            return self.backtrack(assignment)
+#        else:
+#            # undo assignments?
+#            print("undo assignments")
+#            assignment.pop() # it removes the last inserted element?
 
 
 def main():
@@ -281,14 +283,3 @@ if __name__ == "__main__":
     main()
 
 
-
-
-
-"""
-        Using Backtracking Search, take as input a partial assignment for the
-        crossword and return a complete assignment if possible to do so.
-
-        `assignment` is a mapping from variables (keys) to words (values).
-
-        If no assignment is possible, return None.
-        """
