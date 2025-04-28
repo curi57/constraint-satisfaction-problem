@@ -154,7 +154,7 @@ class CrosswordCreator():
     def assignment_complete(self, assignment):
         return len(assignment) == len(self.crossword.variables)
 
-    # Review
+    # Review (use it to review word uniqueness )
     def consistent(self, assignment : dict):
         
         items = assignment.items()
