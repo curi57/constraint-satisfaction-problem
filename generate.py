@@ -97,25 +97,21 @@ class CrosswordCreator():
 
     def revise(self, x : Variable, y : Variable):
         
-        print(f"Domains: {self.domains}")
+        print(f"x_domains: {self.domains[x]}")
+        print(f"y_domains: {self.domains[y]}")
 
-        # What happens when i use a Variable as a key? Do they use the __str__ or __repr__ method to understand it as a key string?
         revised = False
-
-        # x & y represents a Variable (a sequence of empty spots for letters)
-        for word_x in self.domains[x].copy(): # I have to create a copy because i will maybe change the original structure 
-            # while iterating it
+        for word_x in self.domains[x].copy(): # I have to create a copy because i may change the original structure (in the middle of iteration)
+            valid_crossing_word = False 
             for word_y in self.domains[y]:
-                
-                # index_overlap is a tuple wich represents the indexes of the intersection coordinate point in the x and y variables (wich may differ from each other)
-                # These indexes also points to the letter in either candidate words.
-                intersection_indexes = self.crossword.overlaps[x, y]
-
-                # here i need to verify if the letters from corresponding variables indices are equal to each other
-                if word_x[intersection_indexes[0]] != word_y[intersection_indexes[1]]:
-                    self.domains[x].remove(word_x)
-                    revised = True 
-        
+                intersection = self.crossword.overlaps[x, y]
+                if word_x[intersection[0]] == word_y[intersection[1]]:
+                    valid_crossing_word = True 
+            
+            if not valid_crossing_word:
+                self.domains[x].remove(word_x)
+                revised = True 
+            
         return revised
  
                 
@@ -136,13 +132,14 @@ class CrosswordCreator():
 
         # --------------------------------------------------------------------------------------------------------
         
+        # Arc is a tuple containing the 2 variables connected to each other
         for arc in arcs:
 
-            # The code always remove from the arc[0] in case of enforcing arc consistency
+            # cmmt: the code always remove from the arc[0] in case of enforcing arc consistency
             if self.revise(arc[0], arc[1]):
                 
-                # Move it to Backtrack Function (?)
-                if not len(self.domains[arc[0]]):
+                
+                if not len(self.domains[arc[0]]) or not len(self.domains[arc[1]]):
                     return False
                 
                 neighboors = self.crossword.neighbors(arc[0])
@@ -154,23 +151,10 @@ class CrosswordCreator():
     def assignment_complete(self, assignment):
         return len(assignment) == len(self.crossword.variables)
 
-    # Review (use it to review word uniqueness )
+    # Review (use it to review word uniqueness)
     def consistent(self, assignment : dict):
+        print("consistent")
         
-        items = assignment.items()
-
-        # The assignment Keys are the name of the Variables (?)
-        for variable_i, word_i in items:
-            for variable_j, word_j in items:
-                if variable_i != variable_j:
-                    overlap_indexes = self.crossword.overlaps[variable_i, variable_j]
-                    if overlap_indexes:
-                        if (word_i[overlap_indexes[0]] != word_j[overlap_indexes[1]]) or word_i == word_j:
-                            return False
-
-        return True
-
-
 
     def order_domain_values(self, var, assignment):
         """
@@ -179,7 +163,7 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        return list()
+        return assignment
 
 
     def select_unassigned_variable(self, assignment : dict):
@@ -225,34 +209,24 @@ class CrosswordCreator():
 
 
     def backtrack(self, assignment : dict):
-        
-        variable = self.select_unassigned_variable(assignment)
-        order_domain_values = self.order_domain_values(variable, assignment)
 
-        #if not len(order_domain_values):
-        #    return None 
+        # 1. Escolha uma variável "arbitrária" inicialmente
+        variable = self.select_unassigned_variable(assignment)
         
+        # 2. Escolha um valor de domain "arbitrário" inicialmente
+        order_domain_values = self.order_domain_values(variable, assignment)
         word = order_domain_values[0]
-        # Every time a new variable is assigned a new consistent verification has to be made 
-        # The system is capable of making inferences while making verification
+
+        # 3. Atribua o valor arbitrário a variável arbitrária numa cópia de assignment
         assignment_cp = assignment.copy()
         assignment_cp[variable] = word
 
-        # It is necessary to reflect the value domain choice in the self.domains values for this selected variable
-        self.domains[variable] = filter(lambda w : w == word, self.domains[variable]) 
-
-        # The AC3 arc-consistency verification is mandatory after set assignment value  
-        consistent = self.ac3() # Send Arcs
-    
-        return None 
+        if not self.ac3():
+            return None 
         
-#if self.consistent(assignment): # this function probably calls the AC3 function (?)
-#            return self.backtrack(assignment)
-#        else:
-#            # undo assignments?
-#            print("undo assignments")
-#            assignment.pop() # it removes the last inserted element?
-
+        self.backtrack(assignment)
+         
+        
 
 def main():
 
