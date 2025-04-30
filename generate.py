@@ -97,9 +97,6 @@ class CrosswordCreator():
 
     def revise(self, x : Variable, y : Variable):
         
-        print(f"x_domains: {self.domains[x]}")
-        print(f"y_domains: {self.domains[y]}")
-
         revised = False
         for word_x in self.domains[x].copy(): # I have to create a copy because i may change the original structure (in the middle of iteration)
             valid_crossing_word = False 
@@ -113,31 +110,35 @@ class CrosswordCreator():
                 revised = True 
             
         return revised
- 
-                
-    def ac3(self, arcs=None):
-        
-        # Transform variable `arcs` into a class property to avoid buildind the same structure every function call
-        # Do not insert duplicate arcs (order does not matter)
-        if arcs is None:
-            arcs = set()
-            for x in self.crossword.variables:
-                for y in self.crossword.variables:
-                    if self.crossword.overlaps[x, y] and not arcs.__contains__((y, x)):
-                        arcs.add((x, y))
+    
+
+    # Transform variable `arcs` into a class property to avoid buildind the same structure every function call
+    # Do not insert duplicate arcs (order does not matter)
+    def get_arcs(self):
+    
+        arcs = set()
+        for x in self.crossword.variables:
+            for y in self.crossword.variables:
+                if self.crossword.overlaps[x, y] and not arcs.__contains__((y, x)):
+                    arcs.add((x, y))
             
             arcs = list(arcs)
 
         print(f"Arcs: {arcs}")
 
-        # --------------------------------------------------------------------------------------------------------
-        
-        # Arc is a tuple containing the 2 variables connected to each other
-        for arc in arcs:
+        return arcs
 
-            # cmmt: the code always remove from the arc[0] in case of enforcing arc consistency
-            if self.revise(arc[0], arc[1]):
                 
+    def ac3(self, arcs=None):
+        
+        if not arcs:
+            arcs = self.get_arcs()
+
+        print(f"x_domains: {self.domains[x]}")
+        print(f"y_domains: {self.domains[y]}")
+        
+        for arc in arcs:
+            if self.revise(arc[0], arc[1]):
                 
                 if not len(self.domains[arc[0]]) or not len(self.domains[arc[1]]):
                     return False
@@ -147,7 +148,7 @@ class CrosswordCreator():
             
         return True    
 
-                
+
     def assignment_complete(self, assignment):
         return len(assignment) == len(self.crossword.variables)
 
