@@ -11,6 +11,7 @@ class CrosswordCreator():
             var: self.crossword.words.copy()
             for var in self.crossword.variables
         }
+        self.arcs = list()
 
     def letter_grid(self, assignment):
         """
@@ -115,23 +116,28 @@ class CrosswordCreator():
     # Transform variable `arcs` into a class property to avoid buildind the same structure every function call
     # Do not insert duplicate arcs (order does not matter)
     def get_arcs(self):
-    
-        arcs = set()
-        for x in self.crossword.variables:
-            for y in self.crossword.variables:
-                #if self.crossword.overlaps[x, y] and not arcs.__contains__((y, x)):
-                if self.crossword.overlaps[x, y]: # Let it duplicate arcs 
-                    # (it makes it easier to revise arcs — for every x/y domain values find a y/x domain value)
-                    arcs.add((x, y))
-            
-            arcs = list(arcs)
 
-        print(f"Arcs: {arcs}")
-
-        return arcs
+        if not len(self.arcs):
     
-    def vars_has_domain_value_left(self, a : Variable, b : Variable):
-        return len(self.domains[a]) and len(self.domains[b])
+            arcs = set()
+            for x in self.crossword.variables:
+                for y in self.crossword.variables:
+                    #if self.crossword.overlaps[x, y] and not arcs.__contains__((y, x)):
+                    if self.crossword.overlaps[x, y]: # Let it duplicate arcs 
+                        # (it makes it easier to revise arcs — for every x/y domain values find a y/x domain value)
+                        arcs.add((x, y))
+
+                arcs = list(arcs)
+
+            print(f"Arcs: {arcs}")
+
+            return arcs
+        
+        return self.arcs
+    
+
+    def domain_still_valid(self, a : Variable) -> bool:
+        return self.domains[a] 
         
 
     def ac3(self, arcs=None):
@@ -143,11 +149,11 @@ class CrosswordCreator():
             
             if self.revise(arc[0], arc[1]):
 
-                if not self.vars_has_domain_value_left(arc[0], arc[1]):
-                    return False 
+                if not self.domain_still_valid(arc[0]):
+                    return False # The Problem cannot be solved from this current configuration
                                 
                 neighboors = self.crossword.neighbors(arc[0])
-                arcs.extend(list(neighboors))
+                arcs.extend(list(neighboors)) # What it is "neighboors"?
             
         return True    
 
