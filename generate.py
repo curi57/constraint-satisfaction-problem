@@ -119,7 +119,9 @@ class CrosswordCreator():
         arcs = set()
         for x in self.crossword.variables:
             for y in self.crossword.variables:
-                if self.crossword.overlaps[x, y] and not arcs.__contains__((y, x)):
+                #if self.crossword.overlaps[x, y] and not arcs.__contains__((y, x)):
+                if self.crossword.overlaps[x, y]: # Let it duplicate arcs 
+                    # (it makes it easier to revise arcs — for every x/y domain values find a y/x domain value)
                     arcs.add((x, y))
             
             arcs = list(arcs)
@@ -127,22 +129,23 @@ class CrosswordCreator():
         print(f"Arcs: {arcs}")
 
         return arcs
+    
+    def vars_has_domain_value_left(self, a : Variable, b : Variable):
+        return len(self.domains[a]) and len(self.domains[b])
+        
 
-                
     def ac3(self, arcs=None):
         
         if not arcs:
             arcs = self.get_arcs()
 
-        print(f"x_domains: {self.domains[x]}")
-        print(f"y_domains: {self.domains[y]}")
-        
         for arc in arcs:
+            
             if self.revise(arc[0], arc[1]):
-                
-                if not len(self.domains[arc[0]]) or not len(self.domains[arc[1]]):
-                    return False
-                
+
+                if not self.vars_has_domain_value_left(arc[0], arc[1]):
+                    return False 
+                                
                 neighboors = self.crossword.neighbors(arc[0])
                 arcs.extend(list(neighboors))
             
