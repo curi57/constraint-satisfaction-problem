@@ -99,6 +99,10 @@ class CrosswordCreator():
     def revise(self, x : Variable, y : Variable):
         
         revised = False
+
+        # But i do not have access to assigment here. How do i address this problem?
+        # domain_x = self.domains[x].copy() if x not in assignment else assignment[x]
+
         for word_x in self.domains[x].copy(): # I have to create a copy because i may change the original structure (in the middle of iteration)
             valid_crossing_word = False 
             for word_y in self.domains[y]:
@@ -145,12 +149,14 @@ class CrosswordCreator():
         if not arcs:
             arcs = self.get_arcs()
 
+        # Calling function is sending a group of arcs related to the last assigned variable
         for arc in arcs:
-            
             if self.revise(arc[0], arc[1]):
-
+                
+                # Elaborar algum tipo de construto que funcione com return mas retorna apenas se for falso (macros?)
                 if not self.domain_still_valid(arc[0]):
-                    return False # The Problem cannot be solved from this current configuration
+                    # The Problem cannot be solved from this current configuration
+                    return False 
                                 
                 neighboors = self.crossword.neighbors(arc[0])
                 arcs.extend(list(neighboors)) # What it is "neighboors"?
@@ -161,11 +167,10 @@ class CrosswordCreator():
     def assignment_complete(self, assignment):
         return len(assignment) == len(self.crossword.variables)
 
-    # Review (use it to review word uniqueness)
     def consistent(self, assignment : dict):
-        print("consistent")
+        # len(assignment) retorna o comprimento em relação as chaves do dicionário
+        return len(assignment.values()) == len(set(assignment.values()))
         
-
     def order_domain_values(self, var, assignment):
         """
         Return a list of values in the domain of `var`, in order by
@@ -220,21 +225,32 @@ class CrosswordCreator():
 
     def backtrack(self, assignment : dict):
 
-        # 1. Escolha uma variável "arbitrária" inicialmente
+        # [1. Escolha uma variável "arbitrária" inicialmente]
+        # (Evolutiva) 1.1 - Escolher uma variável que tenha o menor número de valores de domain possíveis. 
+        # Isto acarreta uma verificação ordenada na medida em que verificamos a consistência dos arcos que 
+        # se relacionam com a variável que será modificada no método algoritmo AC3.
         variable = self.select_unassigned_variable(assignment)
         
         # 2. Escolha um valor de domain "arbitrário" inicialmente
         order_domain_values = self.order_domain_values(variable, assignment)
         word = order_domain_values[0]
 
-        # 3. Atribua o valor arbitrário a variável arbitrária numa cópia de assignment
+        # 3. Atribua o valor arbitrário a variável SELECIONADA atravé da heurística determinada numa cópia de assignment 
+        # (cada "branch" da recursão vai trabalhar com uma cópia de assignment. [A recursão pode ser vista como uma árvore])
         assignment_cp = assignment.copy()
         assignment_cp[variable] = word
 
-        if not self.ac3():
+        if not self.consistent(assignment):
+            print("Do something")
+
+        # 4. Recupere os arcos associados a variável que foi alterada para verificar arc-consistency de forma ordenada
+        neighboors = self.crossword.neighbors(variable) # What type do it returns?
+        if not self.ac3(arcs=neighboors):
             return None 
         
         self.backtrack(assignment)
+
+        # Devo retornar um assignment?
          
         
 
