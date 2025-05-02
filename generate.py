@@ -99,10 +99,6 @@ class CrosswordCreator():
     def revise(self, x : Variable, y : Variable):
         
         revised = False
-
-        # But i do not have access to assigment here. How do i address this problem?
-        # domain_x = self.domains[x].copy() if x not in assignment else assignment[x]
-
         for word_x in self.domains[x].copy(): # I have to create a copy because i may change the original structure (in the middle of iteration)
             valid_crossing_word = False 
             for word_y in self.domains[y]:
@@ -149,7 +145,8 @@ class CrosswordCreator():
         if not arcs:
             arcs = self.get_arcs()
 
-        # Calling function is sending a group of arcs related to the last assigned variable
+        # Calling function is sending a group of arcs related to the last assigned variable OR
+        # it is the first calling for the method 
         for arc in arcs:
             if self.revise(arc[0], arc[1]):
                 
@@ -158,7 +155,7 @@ class CrosswordCreator():
                     # The Problem cannot be solved from this current configuration
                     return False 
                                 
-                neighboors = self.crossword.neighbors(arc[0])
+                neighboors = self.crossword.neighbors(arc[0]) # ?
                 arcs.extend(list(neighboors)) # What it is "neighboors"?
             
         return True    
@@ -167,10 +164,11 @@ class CrosswordCreator():
     def assignment_complete(self, assignment):
         return len(assignment) == len(self.crossword.variables)
 
+
     def consistent(self, assignment : dict):
-        # len(assignment) retorna o comprimento em relação as chaves do dicionário
         return len(assignment.values()) == len(set(assignment.values()))
         
+
     def order_domain_values(self, var, assignment):
         """
         Return a list of values in the domain of `var`, in order by
@@ -228,7 +226,7 @@ class CrosswordCreator():
         # [1. Escolha uma variável "arbitrária" inicialmente]
         # (Evolutiva) 1.1 - Escolher uma variável que tenha o menor número de valores de domain possíveis. 
         # Isto acarreta uma verificação ordenada na medida em que verificamos a consistência dos arcos que 
-        # se relacionam com a variável que será modificada no método algoritmo AC3.
+        # se relacionam com a variável assinada.
         variable = self.select_unassigned_variable(assignment)
         
         # 2. Escolha um valor de domain "arbitrário" inicialmente
@@ -240,20 +238,27 @@ class CrosswordCreator():
         assignment_cp = assignment.copy()
         assignment_cp[variable] = word
 
-        if not self.consistent(assignment):
-            print("Do something")
+        n = 1
+        while not self.consistent(assignment):
+            if len(order_domain_values) > n:
+                assignment[variable] = order_domain_values[n]
+            else:
+                return None # Solution is not possible for this Variable within the current system configuration
+            
+            n += 1
+        
+        # 3.1 - Atualiza domain da variável para conter apenas a palavra que está associada a ela em assignment
+        self.domains[variable] = [word]
 
         # 4. Recupere os arcos associados a variável que foi alterada para verificar arc-consistency de forma ordenada
         neighboors = self.crossword.neighbors(variable) # What type do it returns?
         if not self.ac3(arcs=neighboors):
             return None 
         
-        self.backtrack(assignment)
-
-        # Devo retornar um assignment?
-         
+        return self.backtrack(assignment)
         
-
+         
+    
 def main():
 
     # Check usage
