@@ -14,9 +14,6 @@ class CrosswordCreator():
         self.arcs = list()
 
     def letter_grid(self, assignment):
-        """
-        Return 2D array representing a given assignment.
-        """
         letters = [
             [None for _ in range(self.crossword.width)]
             for _ in range(self.crossword.height)
@@ -30,9 +27,6 @@ class CrosswordCreator():
         return letters
 
     def print(self, assignment):
-        """
-        Print crossword assignment to the terminal.
-        """
         letters = self.letter_grid(assignment)
         for i in range(self.crossword.height):
             for j in range(self.crossword.width):
@@ -43,9 +37,6 @@ class CrosswordCreator():
             print()
 
     def save(self, assignment, filename):
-        """
-        Save crossword assignment to an image file.
-        """
         from PIL import Image, ImageDraw, ImageFont
         cell_size = 100
         cell_border = 2
@@ -83,38 +74,7 @@ class CrosswordCreator():
 
         img.save(filename)
 
-    def solve(self):
-         
-        self.enforce_node_consistency()
-        self.ac3()
-        return self.backtrack(dict())
 
-    # Build the domain values in a node consistent way at the start instead of doing it in this function
-    def enforce_node_consistency(self):
-        for var in self.crossword.variables:
-            fits_var = lambda word: len(word) == var.length
-            self.domains[var] = list(filter(fits_var, self.domains[var]))
-
-
-    def revise(self, x : Variable, y : Variable):
-        
-        revised = False
-        for word_x in self.domains[x].copy(): # I have to create a copy because i may change the original structure (in the middle of iteration)
-            valid_crossing_word = False 
-            for word_y in self.domains[y]:
-                intersection = self.crossword.overlaps[x, y]
-                if word_x[intersection[0]] == word_y[intersection[1]]:
-                    valid_crossing_word = True 
-            
-            if not valid_crossing_word:
-                self.domains[x].remove(word_x)
-                revised = True 
-            
-        return revised
-    
-
-    # Transform variable `arcs` into a class property to avoid buildind the same structure every function call
-    # Do not insert duplicate arcs (order does not matter)
     def get_arcs(self):
 
         if not len(self.arcs):
@@ -129,8 +89,6 @@ class CrosswordCreator():
 
                 arcs = list(arcs)
 
-            print(f"Arcs: {arcs}")
-
             return arcs
         
         return self.arcs
@@ -138,27 +96,66 @@ class CrosswordCreator():
 
     def domain_still_valid(self, a : Variable) -> bool:
         return self.domains[a] 
-        
+    
+
+    def solve(self):
+         
+        self.enforce_node_consistency()
+        self.ac3()
+        return self.backtrack(dict())
+
+    
+    def enforce_node_consistency(self):
+        for var in self.crossword.variables:
+            fits_var = lambda word: len(word) == var.length
+            self.domains[var] = list(filter(fits_var, self.domains[var]))
+
+
+    def revise(self, x : Variable, y : Variable):
+
+    
+        revised = False
+
+        # Needs a copy in order to change the original structure (on iteraction)
+        crossing_y = list()
+        for word_x in self.domains[x].copy(): 
+            valid_crossing_word = False 
+            for word_y in self.domains[y]:
+                intersection = self.crossword.overlaps[x, y]
+                if word_x[intersection[0]] == word_y[intersection[1]]:
+                    valid_crossing_word = True 
+                    crossing_y.append(word_y)
+                
+            if not valid_crossing_word:
+                self.domains[x].remove(word_x)
+                revised = True 
+            
+            self.domains[y] = crossing_y
+            
+        return revised
+    
 
     def ac3(self, arcs=None):
         
         if not arcs:
             arcs = self.get_arcs()
 
-        # Calling function is sending a group of arcs related to the last assigned variable OR
-        # it is the first calling for the method 
+        # Calling function is passing arcs as parameters wich relates to the last assigned variable 
+        # (or it is the first call at the beginning of the algorithm) 
         for arc in arcs:
             if self.revise(arc[0], arc[1]):
                 
-                # Elaborar algum tipo de construto que funcione com return mas retorna apenas se for falso (macros?)
-                if not self.domain_still_valid(arc[0]):
-                    # The Problem cannot be solved from this current configuration
+                # There is no more domain values left for the current configuration (for one or neither)
+                if not self.domain_still_valid(arc[0]) or not self.domain_still_valid(arc[1]):
+
+                    # Build a construct that permits to explicitly return some value just if this value is False (#macros?)
+                    # return_if not self.domain_still_valid(arc[0]) or not self.domain_still_valid(arc[1])
                     return False 
                                 
-                neighboors = self.crossword.neighbors(arc[0]) # ?
-                arcs.extend(list(neighboors)) # What it is "neighboors"?
+                neighboors = self.crossword.neighbors(arc[0]) 
+                arcs.extend(list(neighboors)) 
             
-        return True    
+        return True # This returning means current configuration is node consistent
 
 
     def assignment_complete(self, assignment):
@@ -193,22 +190,15 @@ class CrosswordCreator():
             if len(self.domains[var] <= less_remaining):
                 less_remaining = len(self.domains[var])
                 selected_vars.append(var)
-                
-                print(f"less remaining var: {selected_vars}")
         
         if len(selected_vars) > 1:
             
-            print("Tie!")
-            
             selected_var = None 
             for var in selected_vars:
-
-                # Do What kind of structure is that?
                 neighboors = self.crossword.neighbors(var)
                 if len(neighboors) >= neighboors:
                     selected_var = var 
 
-                    print(f"selected var: {selected_var}")
 
             return selected_var
         
@@ -226,39 +216,49 @@ class CrosswordCreator():
         # [1. Escolha uma variável "arbitrária" inicialmente]
         # (Evolutiva) 1.1 - Escolher uma variável que tenha o menor número de valores de domain possíveis. 
         # Isto acarreta uma verificação ordenada na medida em que verificamos a consistência dos arcos que 
-        # se relacionam com a variável assinada.
-        variable = self.select_unassigned_variable(assignment)
+        # se relacionam com a variável assinada. A primeira variável escolhida será aquela que tem o maior
+        # número de relações dentro do grafo
+        variable = self.select_unassigned_variable(assignment) # Can have same number of connections and same number of 
+        # domain values (what happens?)
         
-        # 2. Escolha um valor de domain "arbitrário" inicialmente
+        # 2. Choose an arbitrary domain value initially
         order_domain_values = self.order_domain_values(variable, assignment)
-        word = order_domain_values[0]
-
-        # 3. Atribua o valor arbitrário a variável SELECIONADA atravé da heurística determinada numa cópia de assignment 
-        # (cada "branch" da recursão vai trabalhar com uma cópia de assignment. [A recursão pode ser vista como uma árvore])
-        assignment_cp = assignment.copy()
-        assignment_cp[variable] = word
-
-        n = 1
-        while not self.consistent(assignment):
-            if len(order_domain_values) > n:
-                assignment[variable] = order_domain_values[n]
-            else:
-                return None # Solution is not possible for this Variable within the current system configuration
-            
-            n += 1
+        assignment[variable] = word = order_domain_values[0]
+ 
+        # Base case [Condition] 2: Solution not possible from the current system configuration (repeated word)
+        # n = 1
+        # while not self.consistent(assignment):
+        #     if len(order_domain_values) > n:
+        #         assignment[variable] = word = order_domain_values[n]
+        #     else:
+        #         return None 
+        #     n += 1
         
-        # 3.1 - Atualiza domain da variável para conter apenas a palavra que está associada a ela em assignment
+        var_domain_current_state = self.domains.copy() 
         self.domains[variable] = [word]
 
-        # 4. Recupere os arcos associados a variável que foi alterada para verificar arc-consistency de forma ordenada
-        neighboors = self.crossword.neighbors(variable) # What type do it returns?
-        if not self.ac3(arcs=neighboors):
-            return None 
+        neighboors = self.crossword.neighbors(variable) 
+        is_arc_consistent = self.ac3(arcs=neighboors)
+
+        if not is_arc_consistent:
+            self.domains[variable] = var_domain_current_state - word
+            del assignment[variable]
+
+            if not self.domains[variable]: # It means i do not have any more values for this specific domain
+                return None 
+
+        # Base case [Condition] -1: assignment is Complete
+        if self.assignment_complete(assignment):
+            return assignment
         
-        return self.backtrack(assignment)
+        result = self.backtrack(assignment)
+
+        if result is None:
+            return None
         
-         
-    
+        return assignment
+
+        
 def main():
 
     # Check usage
