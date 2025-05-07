@@ -113,24 +113,20 @@ class CrosswordCreator():
 
     def revise(self, x : Variable, y : Variable):
 
-    
         revised = False
-
         # Needs a copy in order to change the original structure (on iteraction)
-        crossing_y = list()
         for word_x in self.domains[x].copy(): 
             valid_crossing_word = False 
             for word_y in self.domains[y]:
                 intersection = self.crossword.overlaps[x, y]
                 if word_x[intersection[0]] == word_y[intersection[1]]:
                     valid_crossing_word = True 
-                    crossing_y.append(word_y)
-                
+                       
             if not valid_crossing_word:
                 self.domains[x].remove(word_x)
                 revised = True 
             
-            self.domains[y] = crossing_y
+            # self.domains[y] = crossing_y
             
         return revised
     
@@ -224,15 +220,6 @@ class CrosswordCreator():
         # 2. Choose an arbitrary domain value initially
         order_domain_values = self.order_domain_values(variable, assignment)
         assignment[variable] = word = order_domain_values[0]
- 
-        # Base case [Condition] 2: Solution not possible from the current system configuration (repeated word)
-        # n = 1
-        # while not self.consistent(assignment):
-        #     if len(order_domain_values) > n:
-        #         assignment[variable] = word = order_domain_values[n]
-        #     else:
-        #         return None 
-        #     n += 1
         
         var_domain_current_state = self.domains.copy() 
         self.domains[variable] = [word]
@@ -244,7 +231,8 @@ class CrosswordCreator():
             self.domains[variable] = var_domain_current_state - word
             del assignment[variable]
 
-            if not self.domains[variable]: # It means i do not have any more values for this specific domain
+            # Verify duplication here? (Remove word when it is duplicated?)
+            if duplicated() or not self.domains[variable]: # It means i do not have any more values for this specific domain
                 return None 
 
         # Base case [Condition] -1: assignment is Complete
@@ -253,10 +241,23 @@ class CrosswordCreator():
         
         result = self.backtrack(assignment)
 
+        # Final verification
         if result is None:
             return None
         
         return assignment
+
+
+    def duplicated():
+        # Base case [Condition] 2: Solution not possible from the current system configuration (repeated word)
+        # n = 1
+        # while not self.consistent(assignment):
+        #     if len(order_domain_values) > n:
+        #         assignment[variable] = word = order_domain_values[n]
+        #     else:
+        #         return None 
+        #     n += 1
+
 
         
 def main():
