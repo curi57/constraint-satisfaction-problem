@@ -94,10 +94,6 @@ class CrosswordCreator():
         return self.arcs
     
 
-    def domain_still_valid(self, a : Variable) -> bool:
-        return self.domains[a] 
-    
-
     def solve(self):
          
         self.enforce_node_consistency()
@@ -111,47 +107,36 @@ class CrosswordCreator():
             self.domains[var] = list(filter(fits_var, self.domains[var]))
 
 
+    # These two Variables are always related to each other (one of them has been changed)
     def revise(self, x : Variable, y : Variable):
-
-        revised = False
-        # Needs a copy in order to change the original structure (on iteraction)
-        for word_x in self.domains[x].copy(): 
-            valid_crossing_word = False 
+        
+        # The goal here is to verify if y domain has any matching value to x domain (one single assigned value)
+        valid_crossing_words_y = list()
+        for word_x in self.domains[x]: 
             for word_y in self.domains[y]:
-                intersection = self.crossword.overlaps[x, y]
-                if word_x[intersection[0]] == word_y[intersection[1]]:
-                    valid_crossing_word = True 
+                if self.condition(word_x, word_y):
+                    valid_crossing_words_y.append(word_y) 
                        
-            if not valid_crossing_word:
-                self.domains[x].remove(word_x)
-                revised = True 
-            
-            # self.domains[y] = crossing_y
-            
+        revised = len(valid_crossing_words_y) != self.domains[y]
         return revised
     
-
+    def condition(self, word_x, word_y):
+        intersection = self.crossword.overlaps[x, y]
+        return word_x[intersection[0]] == word_y[intersection[1]]
+        
     def ac3(self, arcs=None):
         
-        if not arcs:
-            arcs = self.get_arcs()
+        # if not arcs:
+        #     arcs = self.get_arcs()
 
-        # Calling function is passing arcs as parameters wich relates to the last assigned variable 
-        # (or it is the first call at the beginning of the algorithm) 
+        # These arcs are always related to the new assignment
+        # Ex. For Variable A with 2 connections with B and C arcs will be: [(A, B), (A, C)]
         for arc in arcs:
             if self.revise(arc[0], arc[1]):
+                if not len(self.domains[arc[1]]): # No valid matching value for a particular assigned value in a specific relation
+                    return False                          
                 
-                # There is no more domain values left for the current configuration (for one or neither)
-                if not self.domain_still_valid(arc[0]) or not self.domain_still_valid(arc[1]):
-
-                    # Build a construct that permits to explicitly return some value just if this value is False (#macros?)
-                    # return_if not self.domain_still_valid(arc[0]) or not self.domain_still_valid(arc[1])
-                    return False 
-                                
-                neighboors = self.crossword.neighbors(arc[0]) 
-                arcs.extend(list(neighboors)) 
-            
-        return True # This returning means current configuration is node consistent
+        return True 
 
 
     def assignment_complete(self, assignment):
@@ -209,15 +194,8 @@ class CrosswordCreator():
 
     def backtrack(self, assignment : dict):
 
-        # [1. Escolha uma variável "arbitrária" inicialmente]
-        # (Evolutiva) 1.1 - Escolher uma variável que tenha o menor número de valores de domain possíveis. 
-        # Isto acarreta uma verificação ordenada na medida em que verificamos a consistência dos arcos que 
-        # se relacionam com a variável assinada. A primeira variável escolhida será aquela que tem o maior
-        # número de relações dentro do grafo
-        variable = self.select_unassigned_variable(assignment) # Can have same number of connections and same number of 
-        # domain values (what happens?)
         
-        # 2. Choose an arbitrary domain value initially
+        variable = self.select_unassigned_variable(assignment) 
         order_domain_values = self.order_domain_values(variable, assignment)
         assignment[variable] = word = order_domain_values[0]
         
@@ -243,6 +221,7 @@ class CrosswordCreator():
 
         # Final verification
         if result is None:
+            self.domains[variable] = var_domain_current_state
             return None
         
         return assignment
@@ -257,6 +236,7 @@ class CrosswordCreator():
         #     else:
         #         return None 
         #     n += 1
+        raise NotImplementedError()
 
 
         
