@@ -194,38 +194,37 @@ class CrosswordCreator():
 
     def backtrack(self, assignment : dict):
 
-        
         variable = self.select_unassigned_variable(assignment) 
         order_domain_values = self.order_domain_values(variable, assignment)
-        assignment[variable] = word = order_domain_values[0]
         
         var_domain_current_state = self.domains.copy() 
         self.domains[variable] = [word]
 
         neighboors = self.crossword.neighbors(variable) 
-        is_arc_consistent = self.ac3(arcs=neighboors)
+        arc_consistent = self.ac3(arcs=neighboors)
+        word = None 
+        if arc_consistent:
+            # How do we do with duplicated values?
+            assignment[variable] = word = order_domain_values[0]
 
-        if not is_arc_consistent:
+            if self.assignment_complete(assignment):
+                print("assignment complete!") # base case #2
+
+        elif not arc_consistent:
             self.domains[variable] = var_domain_current_state - word
-            del assignment[variable]
 
             # Verify duplication here? (Remove word when it is duplicated?)
-            if duplicated() or not self.domains[variable]: # It means i do not have any more values for this specific domain
+            if not self.domains[variable]: # base case #1
                 return None 
-
-        # Base case [Condition] -1: assignment is Complete
-        if self.assignment_complete(assignment):
-            return assignment
         
         result = self.backtrack(assignment)
-
-        # Final verification
+        
+        # We just come here when backtrack finally returns something (we always go "back" to the top of the function, remember that)
         if result is None:
             self.domains[variable] = var_domain_current_state
+            del assignment[variable]
             return None
         
-        return assignment
-
 
     def duplicated():
         # Base case [Condition] 2: Solution not possible from the current system configuration (repeated word)
