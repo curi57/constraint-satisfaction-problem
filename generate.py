@@ -116,32 +116,31 @@ class CrosswordCreator():
             for word_y in self.domains[y]:
                 if self.condition(word_x, word_y):
                     valid_crossing_words_y.append(word_y) 
-                       
+                    
+        return revised(valid_crossing_words_y)
+    
+    def revised(self, valid_crossing_words_y):
         revised = len(valid_crossing_words_y) != self.domains[y]
+        if revised:
+            self.domains[y] = valid_crossing_words_y
+
         return revised
+
     
     def condition(self, word_x, word_y):
         intersection = self.crossword.overlaps[x, y]
         return word_x[intersection[0]] == word_y[intersection[1]]
         
     def ac3(self, arcs=None):
-        
-        # if not arcs:
-        #     arcs = self.get_arcs()
-
-        # These arcs are always related to the new assignment
-        # Ex. For Variable A with 2 connections with B and C arcs will be: [(A, B), (A, C)]
-        for arc in arcs:
+        revised = False
+        for arc in arcs: # (x, y), (x, z) where x is the assigned variable
             if self.revise(arc[0], arc[1]):
-                if not len(self.domains[arc[1]]): # No valid matching value for a particular assigned value in a specific relation
-                    return False                          
+                revised = True
                 
-        return True 
-
+        return revised 
 
     def assignment_complete(self, assignment):
         return len(assignment) == len(self.crossword.variables)
-
 
     def consistent(self, assignment : dict):
         return len(assignment.values()) == len(set(assignment.values()))
@@ -219,10 +218,17 @@ class CrosswordCreator():
         
         result = self.backtrack(assignment)
         
-        # We just come here when backtrack finally returns something (we always go "back" to the top of the function, remember that)
+        # We just come here when backtrack finally returns something 
+        # We always go "back" to the top of the function (remember that)
         if result is None:
             self.domains[variable] = var_domain_current_state
-            del assignment[variable]
+
+            try:
+                # do del throws an error when key not found?
+                del assignment[variable]
+            except:
+                print("no variable in assignment")
+
             return None
         
 
