@@ -76,24 +76,13 @@ class CrosswordCreator():
 
 
     def get_arcs(self):
-
-        if not len(self.arcs):
-    
-            arcs = set()
-            for x in self.crossword.variables:
-                for y in self.crossword.variables:
-                    #if self.crossword.overlaps[x, y] and not arcs.__contains__((y, x)):
-                    if self.crossword.overlaps[x, y]: # Let it duplicate arcs 
-                        # (it makes it easier to revise arcs — for every x/y domain values find a y/x domain value)
-                        arcs.add((x, y))
-
-                arcs = list(arcs)
-
-            return arcs
+        arcs = list()
+        for x in self.crossword.variables:
+            for y in self.crossword.variables:
+                if self.crossword.overlaps.__contains__((x, y)): 
+                    arcs.append((x, y))
+        return arcs
         
-        return self.arcs
-    
-
     def solve(self):
          
         self.enforce_node_consistency()
@@ -107,57 +96,47 @@ class CrosswordCreator():
             self.domains[var] = list(filter(fits_var, self.domains[var]))
 
 
-    # These two Variables are always related to each other (one of them has been changed)
     def revise(self, x : Variable, y : Variable):
         
-        # The goal here is to verify if y domain has any matching value to x domain (one single assigned value)
-        valid_crossing_words_y = list()
-        for word_x in self.domains[x]: 
+        intersection : tuple = self.crossword.overlaps.get((x, y))
+
+        x_domain = []
+        for word_x in self.domains[x]: # assigned Variable
             for word_y in self.domains[y]:
-                if self.condition(word_x, word_y):
-                    valid_crossing_words_y.append(word_y) 
-                    
-        return revised(valid_crossing_words_y)
-    
-    def revised(self, valid_crossing_words_y):
-        revised = len(valid_crossing_words_y) != self.domains[y]
+                if word_x[intersection[0]] == word_y[intersection[1]]:
+                    x_domain.append(word_x)
+                    break 
+        revised = len(x_domain) != len(self.domains[x]) # Revised
         if revised:
-            self.domains[y] = valid_crossing_words_y
-
-        return revised
-
-    
-    def condition(self, word_x, word_y):
-        intersection = self.crossword.overlaps[x, y]
-        return word_x[intersection[0]] == word_y[intersection[1]]
+            self.domains[x] = x_domain  
+            return True 
         
+        return False 
+    
     def ac3(self, arcs=None):
-        revised = False
-        for arc in arcs: # (x, y), (x, z) where x is the assigned variable
+        
+        # First call
+        if arcs is None:
+            arcs = self.get_arcs()
+
+        consistent = True 
+        for arc in arcs: 
             if self.revise(arc[0], arc[1]):
-                revised = True
+                if not self.domains[arc[1]]:
+                    consistent = False
                 
-        return revised 
+        return consistent
+
 
     def assignment_complete(self, assignment):
         return len(assignment) == len(self.crossword.variables)
+
 
     def consistent(self, assignment : dict):
         return len(assignment.values()) == len(set(assignment.values()))
         
 
-    def order_domain_values(self, var, assignment):
-        """
-        Return a list of values in the domain of `var`, in order by
-        the number of values they rule out for neighboring variables.
-        The first value in the list, for example, should be the one
-        that rules out the fewest values among the neighbors of `var`.
-        """
-        return assignment
-
-
-    def select_unassigned_variable(self, assignment : dict):
-        
+    def select_unassigned_variable(self, assignment : dict):    
         unassigned_vars = list()
         assignment_keys = assignment.keys()
         for var in self.crossword.variables:
@@ -167,61 +146,65 @@ class CrosswordCreator():
         less_remaining = len(self.crossword.words)
         selected_vars = []
         for var in unassigned_vars:
-            if len(self.domains[var] <= less_remaining):
+            if len(self.domains[var]) <= less_remaining:
                 less_remaining = len(self.domains[var])
                 selected_vars.append(var)
         
         if len(selected_vars) > 1:
             
             selected_var = None 
+            max_neighboors = 0
             for var in selected_vars:
                 neighboors = self.crossword.neighbors(var)
-                if len(neighboors) >= neighboors:
+                neighboors_qt = len(neighboors)
+                if neighboors_qt >= max_neighboors:
                     selected_var = var 
-
+                    max_neighboors = neighboors_qt
 
             return selected_var
         
         elif len(selected_var):
             return selected_var[0]
         
-        else:
-
-            # Do what kind of error can be raised here?
-            raise Exception()
-
-
+    # Repeated word verification
     def backtrack(self, assignment : dict):
 
         variable = self.select_unassigned_variable(assignment) 
         order_domain_values = self.order_domain_values(variable, assignment)
+        word = order_domain_values[0]
         
-        var_domain_current_state = self.domains.copy() 
+        domain_current_state = self.domains.copy() 
         self.domains[variable] = [word]
 
         neighboors = self.crossword.neighbors(variable) 
         arc_consistent = self.ac3(arcs=neighboors)
-        word = None 
         if arc_consistent:
-            # How do we do with duplicated values?
-            assignment[variable] = word = order_domain_values[0]
+            
+            assignment[variable] = word
+            if not self.consistent(assignment):
+                self.domains = domain_current_state
+                self.domains[variable] = domain_current_state[variable] - word
 
-            if self.assignment_complete(assignment):
-                print("assignment complete!") # base case #2
-
+            elif self.assignment_complete(assignment):
+                # base case #B
+                print(f"assignment complete: {assignment}") 
+                return assignment
+                
         elif not arc_consistent:
-            self.domains[variable] = var_domain_current_state - word
+            # base case #A
+            if not self.domains[variable]: 
+                # Before pruning and doing variable assignments (no domain options left)
+                self.domains = domain_current_state
+            else:
+                self.domains = domain_current_state
+                self.domains[variable] = domain_current_state[variable] - word
 
-            # Verify duplication here? (Remove word when it is duplicated?)
-            if not self.domains[variable]: # base case #1
-                return None 
-        
         result = self.backtrack(assignment)
         
-        # We just come here when backtrack finally returns something 
-        # We always go "back" to the top of the function (remember that)
+        # 1.1 - We just come here when backtrack finally returns something 
+        # 1.2 - We always go "back" to the top of the function (remember that)
         if result is None:
-            self.domains[variable] = var_domain_current_state
+            self.domains[variable] = domain_current_state
 
             try:
                 # do del throws an error when key not found?
@@ -231,20 +214,19 @@ class CrosswordCreator():
 
             return None
         
+        return result # ?
+    
+    
+    def order_domain_values(self, var, assignment : dict):
+        """
+        Return a list of values in the domain of `var`, in order by
+        the number of values they rule out for neighboring variables.
+        The first value in the list, for example, should be the one
+        that rules out the fewest values among the neighbors of `var`.
+        """
+        return assignment.get(var)
 
-    def duplicated():
-        # Base case [Condition] 2: Solution not possible from the current system configuration (repeated word)
-        # n = 1
-        # while not self.consistent(assignment):
-        #     if len(order_domain_values) > n:
-        #         assignment[variable] = word = order_domain_values[n]
-        #     else:
-        #         return None 
-        #     n += 1
-        raise NotImplementedError()
-
-
-        
+    
 def main():
 
     # Check usage
