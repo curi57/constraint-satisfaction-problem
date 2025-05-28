@@ -99,17 +99,17 @@ class CrosswordCreator():
     def revise(self, x : Variable, y : Variable):
         
         intersection : tuple = self.crossword.overlaps.get((x, y))
-
-        x_domain = []
-        for word_x in self.domains[x]: # assigned Variable
-            for word_y in self.domains[y]:
-                if word_x[intersection[0]] == word_y[intersection[1]]:
-                    x_domain.append(word_x)
-                    break 
-        revised = len(x_domain) != len(self.domains[x]) # Revised
-        if revised:
-            self.domains[x] = x_domain  
-            return True 
+        if intersection:
+            x_domain = []
+            for word_x in self.domains[x]: # assigned Variable
+                for word_y in self.domains[y]:
+                    if word_x[intersection[0]] == word_y[intersection[1]]:
+                        x_domain.append(word_x)
+                        break 
+            revised = len(x_domain) != len(self.domains[x]) # Revised
+            if revised:
+                self.domains[x] = x_domain  
+                return True 
         
         return False 
     
@@ -166,55 +166,48 @@ class CrosswordCreator():
         elif len(selected_var):
             return selected_var[0]
         
-    # Repeated word verification
+
     def backtrack(self, assignment : dict):
 
         variable = self.select_unassigned_variable(assignment) 
-        order_domain_values = self.order_domain_values(variable, assignment)
-        word = order_domain_values[0]
-        
-        domain_current_state = self.domains.copy() 
-        self.domains[variable] = [word]
-
         neighboors = self.crossword.neighbors(variable) 
-        arc_consistent = self.ac3(arcs=neighboors)
-        if arc_consistent:
-            
-            assignment[variable] = word
-            if not self.consistent(assignment):
-                self.domains = domain_current_state
-                self.domains[variable] = domain_current_state[variable] - word
-
-            elif self.assignment_complete(assignment):
-                # base case #B
-                print(f"assignment complete: {assignment}") 
-                return assignment
-                
-        elif not arc_consistent:
-            # base case #A
-            if not self.domains[variable]: 
-                # Before pruning and doing variable assignments (no domain options left)
-                self.domains = domain_current_state
-            else:
-                self.domains = domain_current_state
-                self.domains[variable] = domain_current_state[variable] - word
-
-        result = self.backtrack(assignment)
         
-        # 1.1 - We just come here when backtrack finally returns something 
-        # 1.2 - We always go "back" to the top of the function (remember that)
-        if result is None:
-            self.domains[variable] = domain_current_state
+        order_domain_values = self.order_domain_values(variable, assignment)     
+        domain_current_state = self.domains.copy() # Not Sure If It is Necessary to Copy Complete Domain
+        if len(order_domain_values):
+            word = order_domain_values[0] # Make Tests with and without ordering
+            self.domains[variable] = [word]
+            assignment[variable] = word
 
-            try:
-                # do del throws an error when key not found?
+            # Insert In the get_arcs Function (?)
+            arcs = list()
+            for n in neighboors:
+                arcs.append((variable, n))
+
+            arc_consistent = self.ac3(arcs)
+            if arc_consistent:
+                if self.assignment_complete(assignment):
+                    # base case #B
+                    return assignment
+            else: # A Atribuição Não Deu Certo na Stack Frame Atual
+                #self.domains = domain_current_state
+                self.domains[variable] = domain_current_state[variable] - word
                 del assignment[variable]
-            except:
-                print("no variable in assignment")
-
+        else:
             return None
         
-        return result # ?
+        
+        result = self.backtrack(assignment) # Uma Atribuição Numa Stack Frame Acima Não Deu Certo
+        # 1.1 - We just come here when backtrack finally returns something 
+        # 1.2 - We always go "back" to the top of the function (remember that)
+        if result is None: # Restaurar Estado e Seguir Adiante
+            self.domains = domain_current_state
+            #self.domains[variable] = domain_current_state[variable] - word # Is That Right?
+            del assignment[variable]
+            
+            return self.backtrack(assignment)
+        
+        return result
     
     
     def order_domain_values(self, var, assignment : dict):
@@ -224,7 +217,7 @@ class CrosswordCreator():
         The first value in the list, for example, should be the one
         that rules out the fewest values among the neighbors of `var`.
         """
-        return assignment.get(var)
+        return self.domains[var]
 
     
 def main():
